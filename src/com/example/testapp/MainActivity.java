@@ -27,7 +27,15 @@ import org.json.simple.parser.JSONParser;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Paint.Align;
+import android.graphics.Paint.Style;
+import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -100,7 +108,7 @@ LocationListener
                 });
 
             }
-        }, 30000, 30000);
+        }, 60000, 60000);
         
     }
             
@@ -124,13 +132,14 @@ LocationListener
     	CameraPosition cameraPosition = new CameraPosition.Builder()
         .target(My_LOCATION) // Sets the center of the map to
                                     // My location
-        .zoom(17)                   // Sets the zoom
+        .zoom(14)                   // Sets the zoom
         .bearing(90) // Sets the orientation of the camera to east
         .tilt(30)    // Sets the tilt of the camera to 30 degrees
         .build();    // Creates a CameraPosition from the builder
         mMap.animateCamera(CameraUpdateFactory.newCameraPosition(
         cameraPosition));
         String sbr= "http://smartcommbluemixdemo.mybluemix.net/getlocation?pLngtd="+location.getLatitude()+"&pLttd="+location.getLongitude()+"&pUnt=100";
+        
         new Connection().execute(new String[]{sbr});
         
         
@@ -161,6 +170,9 @@ LocationListener
 					}
 				}
 			}
+		}
+		else{
+			Toast.makeText(getApplicationContext(), "Please Turn on your GPS", Toast.LENGTH_SHORT).show();
 		}
 	}
     /* Request updates at startup */
@@ -203,6 +215,8 @@ LocationListener
         	ArrayList<CurrentLocationOverlay> mCurrentLocationOverlaysArray = new ArrayList<CurrentLocationOverlay>();
         	//Toast.makeText(getApplicationContext(), "onPostExecute", Toast.LENGTH_LONG).show();
         	int lReturnCode = mResponse.getStatusLine().getStatusCode();
+        	//Toast.makeText(getApplicationContext(), "ReturnCode:["+lReturnCode+"]", Toast.LENGTH_SHORT).show();
+        	if (lReturnCode== 200){
             ArrayList<JSONObject> jsonObjectList = new ArrayList<JSONObject>();
         	Header[] headers = mResponse.getAllHeaders();
         	for (Header header : headers) {
@@ -227,7 +241,7 @@ LocationListener
     			jsonObj=iterator.next();
     			
     			 try {
-					mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay((String) jsonObj.get("vhcl_nm"), String.valueOf(jsonObj.get("distance")), Double.parseDouble((String) jsonObj.get("curr_lngtd")), Double.parseDouble((String) jsonObj.get("curr_lattd"))));
+					mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay((String) jsonObj.get("vhcl_nm"),"Bus", String.valueOf(jsonObj.get("distance")), Double.parseDouble((String) jsonObj.get("curr_lngtd")), Double.parseDouble((String) jsonObj.get("curr_lattd"))));
     				
 				} catch (NumberFormatException e) {
 					// TODO Auto-generated catch block
@@ -240,17 +254,18 @@ LocationListener
     		}
         	
         	
-        	//Toast.makeText(getApplicationContext(), "ReturnCode:["+lReturnCode+"]", Toast.LENGTH_SHORT).show();
+        	}
         	
-
-        	/*mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("201 UP", "icon1", Double.parseDouble("22.5832054"), Double.parseDouble("88.4490952")));
-            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("30B UP", "icon2", Double.parseDouble("22.5632054"), Double.parseDouble("88.4490962")));
-            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("215 DWN", "icon3", Double.parseDouble("22.5932054"), Double.parseDouble("88.4490992")));
-            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("201 DWN", "icon4", Double.parseDouble("22.5632054"), Double.parseDouble("88.4490062")));
-            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("AC32 UP", "icon5", Double.parseDouble("22.5732054"), Double.parseDouble("88.4490962")));
-            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("AC39 UP", "icon6", Double.parseDouble("22.5232054"), Double.parseDouble("88.4490162")));
-            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("234 DWN", "icon7", Double.parseDouble("22.5332054"), Double.parseDouble("88.4490965")));
-            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("215A UP", "icondefault", Double.parseDouble("22.5132054"), Double.parseDouble("88.4490972")));*/
+        	/*else{
+        	//mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("201 UP", "Bus","4", Double.parseDouble("22.5832054"), Double.parseDouble("88.4490952")));
+            //mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("30B UP", "icon2", Double.parseDouble("22.5632054"), Double.parseDouble("88.4490962")));
+            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("215 DWN", "Cab","3", Double.parseDouble("22.5932054"), Double.parseDouble("88.4490992")));
+            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("201 DWN", "Bus","7", Double.parseDouble("22.5832154"), Double.parseDouble("88.4401862")));
+            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("AC32 UP", "Cab","6", Double.parseDouble("22.5732054"), Double.parseDouble("88.4490962")));
+            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("AC39 UP", "Bus","5.2", Double.parseDouble("22.5232054"), Double.parseDouble("88.4490162")));
+            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("234 DWN", "Bus","5.9", Double.parseDouble("22.5332054"), Double.parseDouble("88.4490965")));
+            mCurrentLocationOverlaysArray.add(new CurrentLocationOverlay("215A UP", "Cab","5.6", Double.parseDouble("22.5132054"), Double.parseDouble("88.4490972")));
+        	}*/
             plotMarkers(mCurrentLocationOverlaysArray);
             
         }
@@ -267,42 +282,73 @@ LocationListener
 
                 // Create user marker with custom icon and other options
                 MarkerOptions markerOption = new MarkerOptions().position(new LatLng(CurrentLocationOverlay.getmLatitude(), CurrentLocationOverlay.getmLongitude()));
-              //  markerOption.icon(BitmapDescriptorFactory.fromResource(R.drawable.currentlocation_icon));
-
+                
+                String iText=CurrentLocationOverlay.getmDistance()+"km";
+                if(CurrentLocationOverlay.getmIcon() == "Bus")
+                {
+               // markerOption.icon(BitmapDescriptorFactory.fromResource(R.drawable.bus_icon));
+                markerOption.icon(BitmapDescriptorFactory.fromBitmap(writeTextOnDrawable(R.drawable.bus_icon, iText)));
+                
+                }
+                else if (CurrentLocationOverlay.getmIcon() == "Cab"){
+                //markerOption.icon(BitmapDescriptorFactory.fromResource(R.drawable.cab_icon));	
+                markerOption.icon(BitmapDescriptorFactory.fromBitmap(writeTextOnDrawable(R.drawable.cab_icon, iText)));
+                }
+                
                 Marker currentMarker = mMap.addMarker(markerOption);
+                //currentMarker.showInfoWindow();
                 mMarkersHashMap.put(currentMarker, CurrentLocationOverlay);
 
                 mMap.setInfoWindowAdapter(new MarkerInfoWindowAdapter());
+                //currentMarker.showInfoWindow();
                 
-                //HttpGet get = new HttpGet(url);
-             // Add a thin red line from London to New York.
-              /*  Polyline line = mMap.addPolyline(new PolylineOptions()
-                    .add(My_LOCATION, new LatLng(CurrentLocationOverlay.getmLatitude(), CurrentLocationOverlay.getmLongitude()))
-                    .width(5)
-                    .color(Color.RED));
-                    */
+              
             }
-            /*double lat1 = 40.74560;
-            double lon1 = -73.94622000000001;
-            double lat2 = 46.59122000000001;
-            double lon2 = -112.004230;
-
-            String url = "http://maps.googleapis.com/maps/api/directions/json?";
-
-            List<NameValuePair> params = new LinkedList<NameValuePair>();
-            params.add(new BasicNameValuePair("origin", lat1 + "," + lon1));
-            params.add(new BasicNameValuePair("destination", lat2 + "," + lon2));
-            params.add(new BasicNameValuePair("sensor", "false"));
-
-            String paramString = URLEncodedUtils.format(params, "utf-8");
-            url += paramString;
-            
-            new PlotM().execute(new String[]{url});*/
-         
+                    
         }
     }
 
-      
+    private Bitmap writeTextOnDrawable(int drawableId, String text) {
+
+
+        Bitmap bm = BitmapFactory.decodeResource(getResources(), drawableId)
+                .copy(Bitmap.Config.ARGB_8888, true);
+
+        Typeface tf = Typeface.create("Helvetica", Typeface.BOLD);
+
+        Paint paint = new Paint();
+        paint.setStyle(Style.FILL);
+        paint.setColor(Color.BLACK);
+        paint.setTypeface(tf);
+        paint.setTextAlign(Align.CENTER);
+        paint.setTextSize(convertToP(getBaseContext(), 11));
+
+        Rect textRect = new Rect();
+        paint.getTextBounds(text, 0, text.length(), textRect);
+
+        Canvas canvas = new Canvas(bm);
+
+        //If the text is bigger than the canvas , reduce the font size
+     // if(textRect.width() >= (canvas.getWidth() - 4))     //the padding on either sides is considered as 4, so as to appropriately fit in the text
+       // paint.setTextSize(convertToP(getBaseContext(), 7));        //Scaling needs to be used for different dpi's
+
+        //Calculate the positions
+        int xPos = (canvas.getWidth() / 2) - 2;     //-2 is for regulating the x position offset
+
+        //"- ((paint.descent() + paint.ascent()) / 2)" is the distance from the baseline to the center.
+        int yPos = (int) ((canvas.getHeight() - 5) - ((paint.descent() + paint.ascent()) / 2)) ;  
+
+        canvas.drawText(text, xPos, yPos, paint);
+
+        return  bm;
+	} 
+    
+    private float convertToP(Context context, int nDP) {
+        // TODO Auto-generated method stub
+         final float conversionScale = context.getResources().getDisplayMetrics().density;
+
+            return (int) ((nDP * conversionScale) + 0.5f) ;
+    }
     @SuppressLint("NewApi")
 	private void setUpMap()
     {
@@ -363,7 +409,7 @@ LocationListener
           //  markerIcon.setImageResource(manageMarkerIcon(CurrentLocationOverlay.getmIcon()));
 			if(CurrentLocationOverlay!=null)
 			{
-			            markerLabel.setText(CurrentLocationOverlay.getmLabel()+" "+CurrentLocationOverlay.getmIcon()+"km");
+			            markerLabel.setText(CurrentLocationOverlay.getmLabel()+" "+CurrentLocationOverlay.getmDistance()+"km");
 			}
 			else{
 				markerLabel.setText("user");

@@ -3,15 +3,17 @@ package com.example.testapp;
 public class CurrentLocationOverlay {
 	private String mLabel;
     private String mIcon;
+    private String mDistance;
     private Double mLatitude;
     private Double mLongitude;
 
-    public CurrentLocationOverlay(String label, String icon, Double latitude, Double longitude)
+    public CurrentLocationOverlay(String label, String icon, String distance, Double latitude, Double longitude)
     {
         this.mLabel = label;
         this.mLatitude = latitude;
         this.mLongitude = longitude;
         this.mIcon = icon;
+        this.mDistance = distance;
     }
 
     public String getmLabel()
@@ -53,5 +55,13 @@ public class CurrentLocationOverlay {
     {
         this.mLongitude = mLongitude;
     }
+
+	public String getmDistance() {
+		return mDistance;
+	}
+
+	public void setmDistance(String mDistance) {
+		this.mDistance = mDistance;
+	}
 }
 
